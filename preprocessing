@@ -1,0 +1,424 @@
+% PREPROCESSING SCRIPT ----------------------------------------------
+
+clear; 
+
+% clearvars -except num txt raw; 
+
+disp('reading data'); 
+% if exist('raw','var') == -3
+%     [num, raw] = xlsread('sample1.xlsx','semiCleanedUpFinalP(less clean)'); 
+
+% [num, txt, raw] = xlsread('sample1.xlsx','semiCleanedUpFinalP(less clean)'); 
+[num, txt, raw] = xlsread('sample1.xlsx','tempTest'); 
+
+%     [num2, txt2, raw2] = xlsread('sample1.xlsx','tempTest'); 
+%     [num3, txt3, raw3] = xlsread('sample1.xlsx','tempTest'); 
+% end
+
+
+titles = raw(1, :); 
+
+
+% find indexes of wanted columns
+ind_a_rt90x = find(cellfun('length',regexp(titles,'a_rt90x')) == 1);
+ind_a_rt90y = find(cellfun('length',regexp(titles,'a_rt90y')) == 1);
+ind_h_area = find(cellfun('length',regexp(titles,'h_area')) == 1);
+ind_b_year = find(cellfun('length',regexp(titles,'b_year')) == 1);
+ind_r_sitearea = find(cellfun('length',regexp(titles,'r_sitearea')) == 1);
+ind_h_fritid = find(cellfun('length',regexp(titles,'h_fritid')) == 1);
+ind_h_typbeby = find(cellfun('length',regexp(titles,'h_typbeby')) == 1);
+ind_r_assessmentyear = find(cellfun('length',regexp(titles,'r_assessmentyear')) == 1);
+ind_r_assessedvalue = find(cellfun('length',regexp(titles,'r_assessedvalue')) == 1);
+ind_r_stdsum = find(cellfun('length',regexp(titles,'r_stdsum')) == 1);
+ind_r_typecode = find(cellfun('length',regexp(titles,'r_typecode')) == 1);
+ind_FNR = find(cellfun('length',regexp(titles,'FNR')) == 1);
+ind_KODVA = find(cellfun('length',regexp(titles,'KODVA')) == 1);
+ind_KODBEL = find(cellfun('length',regexp(titles,'KODBEL')) == 1);
+ind_ARVARDE = find(cellfun('length',regexp(titles,'ARVARDE')) == 1);
+ind_t_price = find(cellfun('length',regexp(titles,'t_price')) == 1);
+ind_contract_date = find(cellfun('length',regexp(titles,'t_contractdate')) == 1);
+ind_recounted_price_valueguard = find(cellfun('length',regexp(titles,'recounted_price')) == 1);
+
+
+% C CREATE AND PREALLOCATE OUTPUT  CELL ARRAY CS
+%-----------------------------------------------
+disp('creating output cell array -------------------------------'); 
+[numberOfRows, ~] = size(raw); 
+numberOfColumns = 40; 
+
+cs = cell(numberOfRows, numberOfColumns); 
+cs(:,1) = raw(:, ind_a_rt90x); %x coord
+cs(:,2) = raw(:, ind_a_rt90y); %y
+cs(2:end,3) = {0};  %point system
+cs(2:end,4) = {0};  
+cs(2:end,5) = {0};
+cs(2:end,6) = {0};
+cs(:,7) = raw(:, ind_h_area);  %
+cs(:,8) = raw(:, ind_b_year);  %
+cs(:,9) = raw(:, ind_ARVARDE);  %
+cs(2:end, 10) = {0};  % year since 
+cs(:,11) = raw(:, ind_r_sitearea);  % 
+cs(:,12) = raw(:, ind_h_fritid);  %
+cs(2:end,13) = {0};   %  year around/vacation 
+cs(:,14) = raw(:, ind_h_typbeby);  %
+cs(2:end,15) = {0}; %  fri
+cs(2:end,16) = {0}; %  kedje
+cs(2:end,17) = {0}; %  rad
+cs(2:end,18) = {0};  %  fri or not fri
+cs(:,19) = raw(:, ind_r_assessmentyear);  %  taxation year
+cs(:,20) = raw(:, ind_r_assessedvalue);   %  taxation value
+cs(:,21) = {0};   %   recounted taxation value
+cs(:,22) = raw(:, ind_r_stdsum);   %  quality
+cs(:,23) = raw(:, ind_FNR);  %
+cs(:,24) = raw(:, ind_KODVA); %
+cs(2:end,25) = {0};  % full water
+cs(2:end,26) = {0};  % summer water
+cs(2:end,27) = {0}; % no water
+cs(2:end,28) = {0};  %  water (y/n)
+cs(2:end,29) = {0};  %  sewage (y/n)
+cs(:,30) = raw(:, ind_contract_date);  %
+cs(:,31) = raw(:, ind_t_price);  %
+cs(:,32) = raw(:, ind_recounted_price_valueguard); %
+cs(2:end,33) = {0};  %
+
+% C b) create titles for the new columns
+cs(1,3) = {'dist/popPoints'}; 
+cs(1,4) = {'--'}; 
+cs(1,5) = {'--'}; 
+cs(1,6) = {'--'}; 
+cs(1,10) = {'--'}; 
+cs(1,12) = {'YearAround/Vacation'}; 
+cs(1,13) = {'--'}; 
+cs(1,15) = {'h_typeby_fri'}; 
+cs(1,16) = {'h_typeby_kedj'}; 
+cs(1,17) = {'h_typeby_rad'}; 
+cs(1,18) = {'h_typeby_fri_YN'}; 
+cs(1,21) = {'r_recounted_assessedvalue'}; 
+cs(1,24) = {'KODVA_orig'}; 
+cs(1,25) = {'KODVA_full'}; 
+cs(1,26) = {'KODVA_summer'}; 
+cs(1,27) = {'KODVA_no'}; 
+cs(1,28) = {'KODVA_B_YN'};
+cs(1,29) = {'KODVA_avl_YN'}; 
+cs(1,30) = {'--'}; 
+cs(1,34) = {'--'}; 
+
+titlesCS = cs(1,:); 
+
+
+% C c) FIND THE NEW INDEXES
+csInd_r_assessmentyear = find(cellfun('length',regexp(titlesCS,'r_assessmentyear')) == 1);
+csInd_r_assessedvalue = find(cellfun('length',regexp(titlesCS,'r_assessedvalue')) == 1);
+csInd_r_recounted_assessedvalue = find(cellfun('length',regexp(titlesCS,'r_recounted_assessedvalue')) == 1);
+csInd_KODVA_orig = find(cellfun('length',regexp(titlesCS,'KODVA_orig')) == 1);
+csInd_KODVA_full = find(cellfun('length',regexp(titlesCS,'KODVA_full')) == 1);
+csInd_KODVA_summer = find(cellfun('length',regexp(titlesCS,'KODVA_summer')) == 1);
+csInd_KODVA_no = find(cellfun('length',regexp(titlesCS,'KODVA_no')) == 1);
+csInd_KODVA_B_YN = find(cellfun('length',regexp(titlesCS,'KODVA_B_YN')) == 1);
+csInd_KODVA_avl_YN = find(cellfun('length',regexp(titlesCS,'KODVA_avl_YN')) == 1);
+csInd_FNR = find(cellfun('length',regexp(titlesCS,'FNR')) == 1);
+
+
+
+
+% R REMOVE ROWS WITH WEIRD VALUES (can be done automatically somehow too)
+disp('removing null values -------------------------------------'); 
+
+remNum = 1;
+[typbebyIndex, ~] = find(num(:,ind_h_typbeby - remNum)>3);  
+[yearsIndex1u, ~] = find(num(:,[ind_b_year - remNum, ind_ARVARDE - remNum, ind_r_assessmentyear - remNum]) > 2018); 
+[yearsIndex1l, ~] = find(num(:,[ind_b_year - remNum, ind_ARVARDE - remNum, ind_r_assessmentyear - remNum]) < 1500); 
+[kodbvaIndex, ~] = find(num(:, ind_KODVA - remNum) > 43); 
+[kodbelIndex, ~] = find(num(:, ind_KODBEL - remNum) > 4); 
+[areaIndex, ~] = find(num(:, ind_h_area - remNum) < 10); 
+[r_assessedIndex, ~] = find(num(:, ind_r_assessedvalue - remNum) < 1000); 
+
+killIndex = unique([typbebyIndex; yearsIndex1u; yearsIndex1l; kodbvaIndex; kodbelIndex; areaIndex; r_assessedIndex]);
+killIndex = killIndex + 1; 
+cs(killIndex, :) = [];
+
+% R b) STRING CLEANUP (extra NULL check)
+[nullIndex, ~] = find(cellfun(@(s) isequal(s, 'NULL'), cs));
+nullIndex = unique(nullIndex); 
+cs(nullIndex, :) = [];
+
+
+
+
+% MODIFICATIONS ON OUTPUT CELL ARRAY cs ------------------------------------------------
+disp('modding cs   -------------------------------------'); 
+% convert to matrix to enable functions
+% numout = cell2mat(cs(2:end, :));
+
+% M1 calculations on coordinates: THE POP/DIST POINTS SYSTEM ------------------------------------
+
+% M1 a) remove decimals from coordinates: 
+cs(2:end,1) = cellfun(@(x) fix(x), cs(2:end,1), 'UniformOutput', false); 
+cs(2:end,2) = cellfun(@(y) fix(y), cs(2:end,2), 'UniformOutput', false);
+
+% M1 b) set with x, y coords and pop of settlements within 25km of uppsala
+cpca = {}; 
+cpca{1, 1} = 'Uppsala'; 
+cpca{2, 1} = 'Stockholm'; 
+cpca{3, 1} = 'Knivsta'; 
+cpca{4, 1} = 'Marsta'; 
+cpca{5, 1} = 'Bjorklinge'; 
+cpca{6, 1} = 'Orsundsbro'; 
+cpca{7, 1} = 'Storvreta'; 
+cpca{8, 1} = 'Balinge'; 
+
+cpca{1, 2} = 6639047; 
+cpca{2, 2} = 6580636; 
+cpca{3, 2} = 6624886; 
+cpca{4, 2} = 6613473; 
+cpca{5, 2} = 6658140; 
+cpca{6, 2} = 6625146; 
+cpca{7, 2} = 6650163; 
+cpca{8, 2} = 6649068; 
+
+cpca{1, 3} = 1602455; 
+cpca{2, 3} = 1629018; 
+cpca{3, 3} = 1611818; 
+cpca{4, 3} = 1615168; 
+cpca{5, 3} = 1597332; 
+cpca{6, 3} = 1584640; 
+cpca{7, 3} = 1606190; 
+cpca{8, 3} = 1596986; 
+
+cpca{1, 4} = 140000; 
+cpca{2, 4} = 790000; 
+cpca{3, 4} = 7000; 
+cpca{4, 4} = 27000; 
+cpca{5, 4} = 3000; 
+cpca{6, 4} = 1800; 
+cpca{7, 4} = 6300; 
+cpca{8, 4} = 2400; 
+
+% M1 c) convert to matrix to enable functions
+% cpcnum = cell2mat(cityPopCellArray(:,2:end)); 
+
+numberOfCityPop = length(cpca); 
+numberOfRows = length(cs); 
+
+% M1 d) calculate distance to each city and assign points
+pointsAdder = 0; 
+myresult = {}; 
+for i = 2:numberOfRows
+    for j = 1:numberOfCityPop
+        points =  cpca{j, 4} * 1 / ...
+            sqrt((abs(cs{i, 1} - cpca{j, 2}))^2 + (abs(cs{i, 2} - cpca{j, 3}))^2); 
+        myresult{j, 1} = points; 
+        pointsAdder = pointsAdder + points; 
+    end
+    cs{i, 3} = pointsAdder; 
+end
+
+
+
+% --------------------------------------------------------------------------
+% M2 split up h_typeby into 3 binary ones. Also have one column where the
+% attached ones are in the same one (1 dimension instead of 3)
+% 
+csIndTypbeby = find(cellfun('length',regexp(titlesCS,'h_typbeby')) == 1);
+% M2 a) run a for loop on all the rows
+for i = 2:numberOfRows
+    if cs{i,csIndTypbeby(1)} == 1
+        cs{i,csIndTypbeby(1) + 1} = 1; 
+    elseif cs{i,csIndTypbeby(1)} == 2
+        cs{i,csIndTypbeby(1) + 2} = 1; 
+    elseif cs{i,csIndTypbeby(1)} == 3
+        cs{i,csIndTypbeby(1) + 3} = 1; 
+    else
+        disp('something wrong when modding h_typeby'); 
+    end
+end
+
+for i = 2:numberOfRows
+    if cs{i,csIndTypbeby(1)} == 1 || cs{i,csIndTypbeby(1)} == 2
+        cs{i,csIndTypbeby(1) + 4} = 1; 
+    end
+end
+
+
+% ---------------------------------------------------------------------
+% M3 DETRENDING THE TAXATION VALUE
+% DOES NOT WORK PERFECTLY NOW AND IS COUNTED ACCORDING TO 2015 VALUES
+
+% M3 a) calculate the means for each year
+
+
+detrendTax = zeros(8, 4); 
+detrendTax(1,1) = 2009; 
+detrendTax(2,1) = 2010; 
+detrendTax(3,1) = 2011; 
+detrendTax(4,1) = 2012; 
+detrendTax(5,1) = 2013; 
+detrendTax(6,1) = 2014; 
+detrendTax(7,1) = 2015; 
+detrendTax(8,1) = 2016; 
+
+
+% M3 b) fill up means for each year
+for j = 2009:2016
+    theOnes = find(cellfun(@(s) isequal(s, j), cs(:, csInd_r_assessmentyear))); 
+    theVals = cs(theOnes, csInd_r_assessedvalue); 
+    theMean = mean(cell2mat(theVals)); 
+    detrendTax(j - 2009 + 1, 2) = theMean; 
+end
+
+% M3 c) CERTAIN YEARS ARE NULL SO ONLY 2009, 2012 and 2015 USED (CAUSES A
+% MESS...) 
+cleanedDT = detrendTax(~any(isnan(detrendTax),2),:); 
+x = cleanedDT(:,1); 
+y = cleanedDT(:,2); 
+eqParam = polyfit(x, y, 1); 
+
+lastVal = eqParam(1) * 2016 + eqParam(2); 
+
+for i = 2009:2016
+   detrendTax(i - 2009 + 1, 3) = eqParam(1) * detrendTax(i - 2009 + 1, 1) + eqParam(2); 
+   
+end
+
+cleanedDT2 = detrendTax(~any(isnan(detrendTax),2),:); 
+for i = 2009:2016
+    detrendTax(i - 2009 + 1, 4) = cleanedDT2(end,3) / detrendTax(i - 2009 + 1, 3);
+end
+
+
+% M3 d) apply function to cs 
+for i = 2:numberOfRows
+    switch cs{i, csInd_r_assessmentyear} 
+        case 2009 
+            cs{i, csInd_r_recounted_assessedvalue} = cs{i, csInd_r_assessedvalue} * detrendTax(1, 4); 
+        case 2010 
+            cs{i, csInd_r_recounted_assessedvalue} = cs{i, csInd_r_assessedvalue} * detrendTax(2, 4); 
+        case 2011 
+            cs{i, csInd_r_recounted_assessedvalue} = cs{i, csInd_r_assessedvalue} * detrendTax(3, 4); 
+        case 2012 
+            cs{i, csInd_r_recounted_assessedvalue} = cs{i, csInd_r_assessedvalue} * detrendTax(4, 4); 
+        case 2013 
+            cs{i, csInd_r_recounted_assessedvalue} = cs{i, csInd_r_assessedvalue} * detrendTax(5, 4); 
+        case 2014 
+            cs{i, csInd_r_recounted_assessedvalue} = cs{i, csInd_r_assessedvalue} * detrendTax(6, 4); 
+        case 2015 
+            cs{i, csInd_r_recounted_assessedvalue} = cs{i, csInd_r_assessedvalue} * detrendTax(7, 4); 
+        case 2016 
+            cs{i, csInd_r_recounted_assessedvalue} = cs{i, csInd_r_assessedvalue} * detrendTax(8, 4); 
+        otherwise
+            disp('the other case'); 
+    end
+end
+
+
+% M4 SPLIT UP KODVA INTO BINARY PARTS ---------------------------------------------------
+% SLIGHTLY SIMPLIFIED CAN BE DONE TO COVER ALL CASES BETTER
+for i = 2:numberOfRows
+    vaAvl = num2str(cs{i, csInd_KODVA_orig});  
+    va = str2double(vaAvl(1)); 
+    avl = str2double(vaAvl(2)); 
+    switch va
+        case 1
+            cs{i, csInd_KODVA_full} = 1; 
+            cs{i, csInd_KODVA_B_YN} = 1; 
+        case 2
+            cs{i, csInd_KODVA_summer} = 1; 
+        case 3
+            cs{i, csInd_KODVA_no} = 1; 
+        case 4
+            ;
+        otherwise
+            disp(['some error when splitting KODVA into binaryVA at ' num2str(i)]); 
+    end
+    
+    switch avl
+        case 1
+            cs{i, csInd_KODVA_avl_YN} = 1; 
+        case 2
+            cs{i, csInd_KODVA_avl_YN} = 1; 
+        case 3
+            ;
+        otherwise
+            disp(['some error when splitting KODVA into binaryAVL at ' num2str(i)]); 
+    end
+end
+
+
+% CHECK IF THE UNIQUE KEY FNR HAS 8 DIGITS. IF IT HAS 9 DIGITS DIGIT NUMBER
+% 3 SHOULD BE REMOVED. AFTER THAT CHECK AGAIN,
+for i = 2:numberOfRows
+    num = numel(num2str(cs{i,csInd_FNR}));
+    if num == 9
+        s = num2str(cs{i,csInd_FNR}); 
+        first = s(1:2); 
+        last = s(4:9);
+        cs{i,csInd_FNR} = str2double(strcat(first, last)); 
+    end
+    
+    num = numel(num2str(cs{i,csInd_FNR}));
+    if num ~= 8
+        disp('There are FNR that are not 8 or 9 digits.'); 
+    end
+    
+end
+
+
+% FIX THE DIST TO WATER ONE
+
+
+
+
+
+% 
+% 
+% % ----X and Y distances to
+% % centre-----------------------------------------------
+% [numoutrows, numoutcolumns] = size(numout);
+% 
+% i = 1; %starting from first data entry...
+% for i=1:numoutrows
+% 	%rows
+% %compute x and y dist and add to first free columns
+% %for the large data set specify city centre if not uppsala
+% 	centre_x = 1602429;
+% 	centre_y = 6639036;
+% %east/west
+% 	xdist_to_centre = numout(i,2)-centre_x;
+% %north/south
+% 	ydist_to_centre = numout(i,1)-centre_y;
+% 	%populate numout
+% 	numout(i, numoutcolumns+1) = xdist_to_centre;
+% 	numout(i, numoutcolumns+2) = ydist_to_centre;
+%     
+% 	%populate cs
+% 	if i == 1
+%     	cs{1, numoutcolumns+1} = 'xdist_to_centre';
+%     	cs{1, numoutcolumns+2} = 'ydist_to_centre';
+% 	end
+%     
+% 	cs{i+1, numoutcolumns+1} = xdist_to_centre;
+% 	cs{i+1, numoutcolumns+2} = ydist_to_centre;
+%     
+% end
+% 
+% 
+
+
+
+
+
+
+
+
+% typbeby cant be more than 3
+% cs(:,7) = raw(:, ind_h_typbeby); 
+
+% negIndex = cellfun(@(x) x==0, raw2, 'UniformOutput', false);
+% raw3(negIndex, :) = []; 
+
+
+xlswrite('processedSample3.xlsx', cs, 1, 'A1');
+
+
+
+
