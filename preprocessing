@@ -9,7 +9,7 @@ disp('reading data');
 %     [num, raw] = xlsread('sample1.xlsx','semiCleanedUpFinalP(less clean)'); 
 
 % [num, txt, raw] = xlsread('sample1.xlsx','semiCleanedUpFinalP(less clean)'); 
-[num, txt, raw] = xlsread('sample1.xlsx','tempTest'); 
+[num, txt, raw] = xlsread('fpr25kmAssessedFNR8.xlsx','Sheet1'); 
 
 %     [num2, txt2, raw2] = xlsread('sample1.xlsx','tempTest'); 
 %     [num3, txt3, raw3] = xlsread('sample1.xlsx','tempTest'); 
@@ -20,8 +20,8 @@ titles = raw(1, :);
 
 
 % find indexes of wanted columns
-ind_a_rt90x = find(cellfun('length',regexp(titles,'a_rt90x')) == 1);
 ind_a_rt90y = find(cellfun('length',regexp(titles,'a_rt90y')) == 1);
+ind_a_rt90x = find(cellfun('length',regexp(titles,'a_rt90x')) == 1);
 ind_h_area = find(cellfun('length',regexp(titles,'h_area')) == 1);
 ind_b_year = find(cellfun('length',regexp(titles,'b_year')) == 1);
 ind_r_sitearea = find(cellfun('length',regexp(titles,'r_sitearea')) == 1);
@@ -38,6 +38,7 @@ ind_ARVARDE = find(cellfun('length',regexp(titles,'ARVARDE')) == 1);
 ind_t_price = find(cellfun('length',regexp(titles,'t_price')) == 1);
 ind_contract_date = find(cellfun('length',regexp(titles,'t_contractdate')) == 1);
 ind_recounted_price_valueguard = find(cellfun('length',regexp(titles,'recounted_price')) == 1);
+ind_VGprediction = find(cellfun('length',regexp(titles,'VGPrediction')) == 1);
 
 
 % C CREATE AND PREALLOCATE OUTPUT  CELL ARRAY CS
@@ -47,10 +48,10 @@ disp('creating output cell array -------------------------------');
 numberOfColumns = 40; 
 
 cs = cell(numberOfRows, numberOfColumns); 
-cs(:,1) = raw(:, ind_a_rt90x); %x coord
-cs(:,2) = raw(:, ind_a_rt90y); %y
+cs(:,1) = raw(:, ind_a_rt90y); %y
+cs(:,2) = raw(:, ind_a_rt90x); %x coord
 cs(2:end,3) = {0};  %point system
-cs(2:end,4) = {0};  
+cs(2:end,4) = {0};  %distance to uppsala
 cs(2:end,5) = {0};
 cs(2:end,6) = {0};
 cs(:,7) = raw(:, ind_h_area);  %
@@ -76,18 +77,22 @@ cs(2:end,26) = {0};  % summer water
 cs(2:end,27) = {0}; % no water
 cs(2:end,28) = {0};  %  water (y/n)
 cs(2:end,29) = {0};  %  sewage (y/n)
-cs(:,30) = raw(:, ind_contract_date);  %
-cs(:,31) = raw(:, ind_t_price);  %
-cs(:,32) = raw(:, ind_recounted_price_valueguard); %
-cs(2:end,33) = {0};  %
+cs(2:end,30) = {0};  %  
+cs(:,31) =  raw(:, ind_VGprediction); % %  valueguard predictions
+cs(2:end,32) = {0};  %  
+cs(2:end,33) = {0};  %  
+cs(:,37) = raw(:, ind_contract_date);  %
+cs(:,38) = raw(:, ind_t_price);  %
+cs(:,39) = raw(:, ind_recounted_price_valueguard); %
+
 
 % C b) create titles for the new columns
 cs(1,3) = {'dist/popPoints'}; 
-cs(1,4) = {'--'}; 
+cs(1,4) = {'distUppsala'}; 
 cs(1,5) = {'--'}; 
 cs(1,6) = {'--'}; 
 cs(1,10) = {'--'}; 
-cs(1,12) = {'YearAround/Vacation'}; 
+cs(1,12) = {'YearAround(0)/Vacation(1)'}; 
 cs(1,13) = {'--'}; 
 cs(1,15) = {'h_typeby_fri'}; 
 cs(1,16) = {'h_typeby_kedj'}; 
@@ -101,12 +106,15 @@ cs(1,27) = {'KODVA_no'};
 cs(1,28) = {'KODVA_B_YN'};
 cs(1,29) = {'KODVA_avl_YN'}; 
 cs(1,30) = {'--'}; 
+cs(1,31) = {'VGPredictions'}; 
 cs(1,34) = {'--'}; 
 
 titlesCS = cs(1,:); 
 
 
 % C c) FIND THE NEW INDEXES
+csInd_y = find(cellfun('length',regexp(titlesCS,'a_rt90y')) == 1);
+csInd_x = find(cellfun('length',regexp(titlesCS,'a_rt90x')) == 1);
 csInd_r_assessmentyear = find(cellfun('length',regexp(titlesCS,'r_assessmentyear')) == 1);
 csInd_r_assessedvalue = find(cellfun('length',regexp(titlesCS,'r_assessedvalue')) == 1);
 csInd_r_recounted_assessedvalue = find(cellfun('length',regexp(titlesCS,'r_recounted_assessedvalue')) == 1);
@@ -117,6 +125,7 @@ csInd_KODVA_no = find(cellfun('length',regexp(titlesCS,'KODVA_no')) == 1);
 csInd_KODVA_B_YN = find(cellfun('length',regexp(titlesCS,'KODVA_B_YN')) == 1);
 csInd_KODVA_avl_YN = find(cellfun('length',regexp(titlesCS,'KODVA_avl_YN')) == 1);
 csInd_FNR = find(cellfun('length',regexp(titlesCS,'FNR')) == 1);
+csInd_distUppsala = find(cellfun('length',regexp(titlesCS,'distUppsala')) == 1);
 
 
 
@@ -138,9 +147,14 @@ killIndex = killIndex + 1;
 cs(killIndex, :) = [];
 
 % R b) STRING CLEANUP (extra NULL check)
-[nullIndex, ~] = find(cellfun(@(s) isequal(s, 'NULL'), cs));
+
+[nullIndex, ~] = find(cellfun(@(s) any(isnan(s(:))), cs)); 
 nullIndex = unique(nullIndex); 
 cs(nullIndex, :) = [];
+
+[nullIndex2, ~] = find(cellfun(@(s) isequal(s, 'NULL'), cs));
+nullIndex2 = unique(nullIndex2); 
+cs(nullIndex2, :) = [];
 
 
 
@@ -153,8 +167,8 @@ disp('modding cs   -------------------------------------');
 % M1 calculations on coordinates: THE POP/DIST POINTS SYSTEM ------------------------------------
 
 % M1 a) remove decimals from coordinates: 
-cs(2:end,1) = cellfun(@(x) fix(x), cs(2:end,1), 'UniformOutput', false); 
 cs(2:end,2) = cellfun(@(y) fix(y), cs(2:end,2), 'UniformOutput', false);
+cs(2:end,1) = cellfun(@(x) fix(x), cs(2:end,1), 'UniformOutput', false); 
 
 % M1 b) set with x, y coords and pop of settlements within 25km of uppsala
 cpca = {}; 
@@ -201,9 +215,10 @@ numberOfCityPop = length(cpca);
 numberOfRows = length(cs); 
 
 % M1 d) calculate distance to each city and assign points
-pointsAdder = 0; 
+
 myresult = {}; 
 for i = 2:numberOfRows
+    pointsAdder = 0; 
     for j = 1:numberOfCityPop
         points =  cpca{j, 4} * 1 / ...
             sqrt((abs(cs{i, 1} - cpca{j, 2}))^2 + (abs(cs{i, 2} - cpca{j, 3}))^2); 
@@ -211,6 +226,18 @@ for i = 2:numberOfRows
         pointsAdder = pointsAdder + points; 
     end
     cs{i, 3} = pointsAdder; 
+end
+
+
+
+% M 1.2 DIST TO UPPSALA ------
+
+uppsalaY = 6639048; 
+uppsalaX = 1602456;
+
+for i = 2:numberOfRows
+    cs{i, csInd_distUppsala} = (sqrt(abs(cs{i, csInd_y} - uppsalaY)^2 + ...
+        abs(cs{i, csInd_x} - uppsalaX)^2)) / 1000; 
 end
 
 
@@ -344,7 +371,7 @@ for i = 2:numberOfRows
 end
 
 
-% CHECK IF THE UNIQUE KEY FNR HAS 8 DIGITS. IF IT HAS 9 DIGITS DIGIT NUMBER
+% M5 CHECK IF THE UNIQUE KEY FNR HAS 8 DIGITS. IF IT HAS 9 DIGITS DIGIT NUMBER
 % 3 SHOULD BE REMOVED. AFTER THAT CHECK AGAIN,
 for i = 2:numberOfRows
     num = numel(num2str(cs{i,csInd_FNR}));
@@ -361,6 +388,8 @@ for i = 2:numberOfRows
     end
     
 end
+
+% M6 REMOVE ALL ROWS THAT DO NOT HAVE A 
 
 
 % FIX THE DIST TO WATER ONE
@@ -417,7 +446,7 @@ end
 % raw3(negIndex, :) = []; 
 
 
-xlswrite('processedSample3.xlsx', cs, 1, 'A1');
+xlswrite('processed25kmF2.xlsx', cs, 1, 'A1');
 
 
 
