@@ -1,5 +1,6 @@
 % PREPROCESSING SCRIPT ----------------------------------------------
 
+
 clear;
 
 % clearvars -except num txt raw;
@@ -133,7 +134,7 @@ csInd_KODVA_B_YN = find(cellfun('length',regexp(titlesCS,'KODVA_B_YN')) == 1);
 csInd_KODVA_avl_YN = find(cellfun('length',regexp(titlesCS,'KODVA_avl_YN')) == 1);
 csInd_FNR = find(cellfun('length',regexp(titlesCS,'FNR')) == 1);
 csInd_distUppsala = find(cellfun('length',regexp(titlesCS,'distUppsala')) == 1);
-
+csInd_contractDate = find(cellfun('length',regexp(titlesCS,'t_contractdate')) == 1);
 
 
 
@@ -396,11 +397,13 @@ for i = 2:numberOfRows
     
 end
 
-% M6 REMOVE ALL ROWS THAT DO NOT HAVE A
 
-
-% FIX THE DIST TO WATER ONE
-
+% M6 CONVERT DATES TO NUMBERS (COMPATIBILITY REASONS) this should only be
+% done on MATLAB 2016b computer
+for i = 2:numberOfRows
+    date = datetime(cs{i,csInd_contractDate},'InputFormat','MM/dd/yyyy'); 
+    cs{i,csInd_contractDate} = datenum(date); 
+end
 
 
 
@@ -504,17 +507,7 @@ for i=2:numrows
 end
 
 
-
-
-
-% typbeby cant be more than 3
-% cs(:,7) = raw(:, ind_h_typbeby);
-
-% negIndex = cellfun(@(x) x==0, raw2, 'UniformOutput', false);
-% raw3(negIndex, :) = [];
-
-
-% xlswrite('processed25kmF4.xlsx', cs, 1, 'A1');
+xlswrite('processed25kmF5.xlsx', cs, 1, 'A1');
 
 
 
